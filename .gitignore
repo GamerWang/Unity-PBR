@@ -1,0 +1,7 @@
+Library
+Temp
+Packages
+.vscode
+*.vs
+*.csproj
+*.sln
