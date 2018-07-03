@@ -6,9 +6,10 @@ Material:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
-  m_Name: MyPBL
-  m_Shader: {fileID: 4800000, guid: e021e315d590bd747a726aba27a1da98, type: 3}
-  m_ShaderKeywords: 
+  m_Name: JS'sPBL
+  m_Shader: {fileID: 4800000, guid: 6a8063a3b99f8ab44bc1e9c32ecc9181, type: 3}
+  m_ShaderKeywords: _FRESNELMODEL_SCHLICK _GEOSHADOWMODEL_WARD _NORMALDISTMODEL_PHONG
+    _SMITHGEOSHADOWMODEL_NONE
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -60,19 +61,31 @@ Material:
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
+    - _ENABLE_D: 0
+    - _ENABLE_F: 0
+    - _ENABLE_G: 0
+    - _ENABLE_NDF: 0
+    - _FresnelModel: 0
+    - _GeoShadowModel: 7
     - _GlossMapScale: 1
-    - _Glossiness: 0.9
+    - _Glossiness: 0.753
     - _GlossyReflections: 1
-    - _Metallic: 0
+    - _Ior: 2.61
+    - _Metallic: 1
     - _Mode: 0
+    - _NormalDistModel: 1
     - _OcclusionStrength: 1
     - _Parallax: 0.02
+    - _SmithGeoShadowModel: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
+    - _SpecularPower: 0.735
+    - _SpecularRange: 23
     - _SrcBlend: 1
     - _UVSec: 0
+    - _UnityLightingContribution: 1
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 0.4339623, g: 0.4339623, b: 0.4339623, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}

@@ -116,6 +116,8 @@
 				return Distribution;
 			}
 
+			//GSF functions
+
 			struct VertexInput {
 				float4 vertex : POSITION;		//local vertex position
 				float3 normal : NORMAL;			//normal direction
@@ -192,7 +194,7 @@
 				float3 specColor = 
 					lerp(_SpecularColor.rgb, _Color.rgb, _Metallic * 0.5);
 				
-				float3 SpecularDistribution = specColor;
+				// float3 SpecularDistribution = specColor;
 
 				//Blinn-Phong NDF
 				// SpecularDistribution *= BlinnPhongNormalDistribution(
@@ -226,16 +228,20 @@
 				// 		dot(halfDirection, i.bitangentDir));
 
 				//Ward Anisotropic NDF
-				SpecularDistribution *= 
-					WardAnisotropicNormalDistribution(
-						_Anisotropic,
-						NdotL,
-						NdotV,
-						NdotH,
-						dot(halfDirection, i.tangentDir),
-						dot(halfDirection, i.bitangentDir));
+				// SpecularDistribution *= 
+				// 	WardAnisotropicNormalDistribution(
+				// 		_Anisotropic,
+				// 		NdotL,
+				// 		NdotV,
+				// 		NdotH,
+				// 		dot(halfDirection, i.tangentDir),
+				// 		dot(halfDirection, i.bitangentDir));
 
-				return float4(float3(1, 1, 1) * SpecularDistribution.rgb, 1);
+				// return float4(float3(1, 1, 1) * SpecularDistribution.rgb, 1);
+
+				float GeometricShadow = 1;
+
+				return float4(float3(1, 1, 1) * GeometricShadow, 1);
 			}
 
 			ENDCG
