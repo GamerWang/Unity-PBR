@@ -1,7 +1,4 @@
-﻿// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-Shader "Custom/MyPBL"
+﻿Shader "Custom/MyPBL"
 {
 	Properties
 	{
@@ -9,6 +6,8 @@ Shader "Custom/MyPBL"
 		_SpecularColor ("Specular Color", Color) = (1,1,1,1)
 		_Glossiness ("Smoothness", Range(0,1)) = 1
 		_Metallic ("Metalness", Range(0,1)) = 0
+
+		_Anisotropic("Anisotropic", Range(-20, 1)) = 0
 	}
 	SubShader
 	{
@@ -31,29 +30,114 @@ Shader "Custom/MyPBL"
 			float4 _SpecularColor;
 			float _Glossiness;
 			float _Metallic;
+			
+			float _Anisotropic;
+
+			//NDF functions
+			float BlinnPhongNormalDistribution(float NdotH,
+				 							   float specularpower,
+											   float speculargloss) {
+				float Distribution = pow(NdotH, speculargloss) * specularpower;
+				Distribution *= (2 + specularpower) / (2 * 3.1415926535);
+				return Distribution;
+			}
+
+			float PhongNormalDistribution(float RdotV, 
+										  float specularpower, 
+										  float speculargloss) {
+				float Distribution = pow(RdotV, speculargloss) * specularpower;
+				Distribution *= (2 + specularpower) / (2 * 3.1415926535);
+				return Distribution;
+			}
+
+			float BeckmanNormalDistribution(float roughness, float NdotH) {
+				float roughnessSqr = roughness * roughness;
+				float NdotHSqr = NdotH * NdotH;
+				return max(0.000001, 
+					(1.0 / (3.1415926535 * roughnessSqr * NdotHSqr * NdotHSqr)) *
+					exp((NdotHSqr - 1) / (roughnessSqr * NdotHSqr)));
+			}
+
+			float GaussianNormalDistribution(float roughness, float NdotH) {
+				float roughnessSqr = roughness * roughness;
+				float thetaH = acos(NdotH);
+				return exp(-thetaH * thetaH / roughnessSqr);
+			}
+
+			float GGXNormalDistribution(float roughness, float NdotH) {
+				float roughnessSqr = roughness * roughness;
+				float NdotHSqr = NdotH * NdotH;
+				float TanNdotHSqr = (1 - NdotHSqr) / NdotHSqr;
+				float NDFRoot = 
+					(roughness / (NdotHSqr * (roughnessSqr + TanNdotHSqr)));
+				return (1.0 / 3.1415926535) * NDFRoot * NDFRoot;
+			}
+
+			float TrowbridgeReitzNormalDistribution(float NdotH, float roughness) {
+				float roughnessSqr = roughness * roughness;
+				float Distribution = NdotH * NdotH * (roughnessSqr - 1.0) + 1.0;
+				return roughnessSqr / (3.1415926535 * Distribution * Distribution);
+			}
+
+			float TrowbridgeReitzAnistropicNormalDistribution(float anisotropic, 
+															 float NdotH, 
+															 float HdotX, 
+															 float HdotY){
+				float aspect = sqrt(1.0h - anisotropic * 0.9h);
+				float X = max(.001, 
+					(1.0 - _Glossiness) * (1.0 - _Glossiness) / aspect) * 5;
+				float Y = max(.001, 
+					(1.0 - _Glossiness) * (1.0 - _Glossiness) * aspect) * 5;
+				return 1.0 / (3.1415926535 * X * Y * 
+					((HdotX / X) * (HdotX / X) + 
+					 (HdotY / Y) * (HdotY / Y) + 
+					 NdotH * NdotH) * 
+					((HdotX / X) * (HdotX / X) + 
+					 (HdotY / Y) * (HdotY / Y) + 
+					 NdotH * NdotH));
+			}
+
+			float WardAnisotropicNormalDistribution(float anisotropic,
+													float NdotL,
+													float NdotV,
+													float NdotH,
+													float HdotX,
+													float HdotY) {
+				float aspect = sqrt(1.0h - anisotropic * 0.9h);
+				float X = max(.001, 
+					(1.0 - _Glossiness) * (1.0 - _Glossiness) / aspect) * 5;
+				float Y = max(.001,
+					(1.0 - _Glossiness) * (1.0 - _Glossiness) * aspect) * 5;
+				float exponent = -((HdotX / X) * (HdotX / X) + 
+					(HdotY / Y) * (HdotY / Y)) / (NdotH * NdotH);
+				float Distribution = 1.0 / 
+					(4.0 * 3.14159265 * X * Y * sqrt(NdotL * NdotV));
+				Distribution *= exp(exponent);
+				return Distribution;
+			}
 
 			struct VertexInput {
-				float4 vertex : POSITION;		// local vertex position
-				float3 normal : NORMAL;			// normal direction
-				float4 tangent : TANGENT;		// tangent direction
-				float2 texcoord0 : TEXCOORD0;	// uv coordinates
-				float2 texcoord1 : TEXCOORD1;	// lightmap uv coordinates
+				float4 vertex : POSITION;		//local vertex position
+				float3 normal : NORMAL;			//normal direction
+				float4 tangent : TANGENT;		//tangent direction
+				float2 texcoord0 : TEXCOORD0;	//uv coordinates
+				float2 texcoord1 : TEXCOORD1;	//lightmap uv coordinates
 			};
 
 			struct VertexOutput {
-				float4 pos : SV_POSITION;	// screen clip space position and depth
-				float2 uv0 : TEXCOORD0;		// uv coordinates
-				float2 uv1 : TEXCOORD1;		// lightmap uv coordinates
+				float4 pos : SV_POSITION;	//screen clip space position and depth
+				float2 uv0 : TEXCOORD0;		//uv coordinates
+				float2 uv1 : TEXCOORD1;		//lightmap uv coordinates
 				
-				// below create our own variables with the texcoord semantic
-				float3 normalDir : TEXCOORD3;	// normal direction
-				float3 posWorld : TEXCOORD4;	// normal direction
+				//below create our own variables with the texcoord semantic
+				float3 normalDir : TEXCOORD3;	//normal direction
+				float3 posWorld : TEXCOORD4;	//normal direction
 				float3 tangentDir : TEXCOORD5;	
 				float3 bitangentDir : TEXCOORD6;
 
-				// this initializes the unity lighting and shadow
+				//this initializes the unity lighting and shadow
 				LIGHTING_COORDS(7, 8)
-				// this initializes the unity fog
+				//this initializes the unity fog
 				UNITY_FOG_COORDS(9)
 			};
 
@@ -74,7 +158,7 @@ Shader "Custom/MyPBL"
 			}
 
 			float4 frag(VertexOutput i) : COLOR {
-				// normal direction calculations
+				//normal direction calculations
 				float3 normalDirection = normalize(i.normalDir);
 				float3 lightDirection = normalize(lerp(
 					_WorldSpaceLightPos0.xyz,
@@ -98,18 +182,62 @@ Shader "Custom/MyPBL"
 				float attenuation = LIGHT_ATTENUATION(i);
 				float3 attenColor = attenuation * _LightColor0.rgb;
 
-				// Roughness
-				// 1 - smoothness * smoothness
+				//Roughness
+				//1 - smoothness * smoothness
 				float roughness = 1 - (_Glossiness * _Glossiness);
 				roughness - roughness * roughness;
 
-				// Metallic
+				//Metallic
 				float3 diffuseColor = _Color.rgb * (1 - _Metallic);
 				float3 specColor = 
 					lerp(_SpecularColor.rgb, _Color.rgb, _Metallic * 0.5);
 				
-				return float4(1, 1, 1, 1);
+				float3 SpecularDistribution = specColor;
+
+				//Blinn-Phong NDF
+				// SpecularDistribution *= BlinnPhongNormalDistribution(
+				// 	NdotH, _Glossiness, max(1, _Glossiness * 40));
+					
+				//Phong NDF
+				// SpecularDistribution *= PhongNormalDistribution(
+				// 	RdotV, _Glossiness, max(1, _Glossiness * 40));
+
+				//Bechman NDF
+				// SpecularDistribution *= 
+				// 	BeckmanNormalDistribution(roughness, NdotH);
+
+				//Gaussian NDF
+				// SpecularDistribution *= 
+				// 	GaussianNormalDistribution(roughness, NdotH);
+
+				//GGX NDF
+				// SpecularDistribution *= GGXNormalDistribution(roughness, NdotH);
+
+				//Trowbridge-Reitz NDF
+				// SpecularDistribution *= 
+				// 	TrowbridgeReitzNormalDistribution(NdotH, roughness);
+
+				//Trowbridge-Reitz Anisotropic NDF
+				// SpecularDistribution *= 
+				// 	TrowbridgeReitzAnistropicNormalDistribution(
+				// 		_Anisotropic,
+				// 		NdotH, 
+				// 		dot(halfDirection, i.tangentDir),
+				// 		dot(halfDirection, i.bitangentDir));
+
+				//Ward Anisotropic NDF
+				SpecularDistribution *= 
+					WardAnisotropicNormalDistribution(
+						_Anisotropic,
+						NdotL,
+						NdotV,
+						NdotH,
+						dot(halfDirection, i.tangentDir),
+						dot(halfDirection, i.bitangentDir));
+
+				return float4(float3(1, 1, 1) * SpecularDistribution.rgb, 1);
 			}
+
 			ENDCG
 		}
 	}
