@@ -18,8 +18,8 @@ Shader "Custom/MyPBL"
 			Name "FORWARD"
 			Tags { "LightMode"="ForwardBase" }
 			CGPROGRAM
-			#pragma vertex vertex
-			#pragma fragment fragment
+			#pragma vertex vert
+			#pragma fragment frag
 			#define UNITY_PASS_ForwardBase
 			#include "UnityCG.cginc"
 			#include "AutoLight.cginc"
@@ -38,7 +38,7 @@ Shader "Custom/MyPBL"
 				float4 tangent : TANGENT;		// tangent direction
 				float2 texcoord0 : TEXCOORD0;	// uv coordinates
 				float2 texcoord1 : TEXCOORD1;	// lightmap uv coordinates
-			}
+			};
 
 			struct VertexOutput {
 				float4 pos : SV_POSITION;	// screen clip space position and depth
@@ -55,7 +55,7 @@ Shader "Custom/MyPBL"
 				LIGHTING_COORDS(7, 8)
 				// this initializes the unity fog
 				UNITY_FOG_COORDS(9)
-			}
+			};
 
 			VertexOutput vert(VertexInput v) {
 				VertexOutput o = (VertexOutput)0;
